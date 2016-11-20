@@ -46,9 +46,7 @@ public class ConnectHandlerFactory implements StompFrameHandlerFactory {
             }
             else {
                 LOGGER.warn("Received unsupported STOMP versions in connect: {}", acceptedVersions);
-                response = new DefaultStompFrame(StompCommand.ERROR);
-                response.content().writeCharSequence("Unsupported version", Charset.defaultCharset());
-                closeAfterResponse = true;
+                buildErrorResponse("Unsupported version");
             }
 
             return this;

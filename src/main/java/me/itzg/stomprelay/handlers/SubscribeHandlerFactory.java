@@ -47,9 +47,7 @@ public class SubscribeHandlerFactory implements StompFrameHandlerFactory {
             final String subscriptionId = headers.getAsString(StompHeaders.ID);
             final String destination = headers.getAsString(StompHeaders.DESTINATION);
             if (!destination.startsWith(properties.getChannelPrefix())) {
-                response = new DefaultStompFrame(StompCommand.ERROR);
-                response.content().writeCharSequence("Incorrect subscription prefix", Charset.defaultCharset());
-                closeAfterResponse = true;
+                buildErrorResponse("Incorrect subscription prefix");
             }
 
             subscriptionManagement.subscribe(context,
@@ -57,5 +55,6 @@ public class SubscribeHandlerFactory implements StompFrameHandlerFactory {
                     subscriptionId);
             return this;
         }
+
     }
 }

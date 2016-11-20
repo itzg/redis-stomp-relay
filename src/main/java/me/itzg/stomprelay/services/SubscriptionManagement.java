@@ -1,10 +1,10 @@
 package me.itzg.stomprelay.services;
 
-import me.itzg.stomprelay.config.StompRedisRelayProperties;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.stomp.DefaultStompFrame;
 import io.netty.handler.codec.stomp.StompCommand;
 import io.netty.handler.codec.stomp.StompHeaders;
+import me.itzg.stomprelay.config.StompRedisRelayProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +15,7 @@ import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.listener.Topic;
 import org.springframework.stereotype.Service;
 
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -26,6 +27,9 @@ public class SubscriptionManagement {
 
     private final StompRedisRelayProperties properties;
     private final RedisMessageListenerContainer redisMessageListenerContainer;
+
+    private ConcurrentHashMap<String/*subId*/, PerSubscriptionListener> subscriptions =
+            new ConcurrentHashMap<>();
 
     @Autowired
     public SubscriptionManagement(StompRedisRelayProperties properties,
@@ -42,6 +46,25 @@ public class SubscriptionManagement {
                 context.channel().remoteAddress(), subscriptionId, channel, topic);
 
         redisMessageListenerContainer.addMessageListener(listener, topic);
+        subscriptions.put(subscriptionId, listener);
+    }
+
+    public void unsubscribe(ChannelHandlerContext context, String subscriptionId) {
+        final PerSubscriptionListener listener = subscriptions.remove(subscriptionId);
+
+        if (listener != null) {
+            LOGGER.debug("Unsubscribing subscription ID={} from context={}", subscriptionId, context);
+            redisMessageListenerContainer.removeMessageListener(listener);
+        }
+        else {
+            throw new IllegalArgumentException("Unknown subscription ID");
+        }
+    }
+
+    public void unsubscribeAllForContext(ChannelHandlerContext context) {
+        subscriptions.entrySet().stream()
+                .filter(e -> e.getValue().context.channel().equals(context.channel()))
+                .forEach(e -> unsubscribe(context, e.getKey()));
     }
 
     private class PerSubscriptionListener implements MessageListener {

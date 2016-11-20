@@ -27,14 +27,17 @@ public class StompRedisRelayService {
     private static final Logger LOGGER = LoggerFactory.getLogger(StompRedisRelayService.class);
 
     private final StompRedisRelayProperties properties;
+    private final SubscriptionManagement subscriptionManagement;
     private final EnumMap<StompCommand, StompFrameHandlerFactory> handlerFactories;
     private NioEventLoopGroup bossGroup;
     private NioEventLoopGroup workerGroup;
 
     @Autowired
     public StompRedisRelayService(StompRedisRelayProperties properties,
-                                  List<StompFrameHandlerFactory> handlerFactories) {
+                                  List<StompFrameHandlerFactory> handlerFactories,
+                                  SubscriptionManagement subscriptionManagement) {
         this.properties = properties;
+        this.subscriptionManagement = subscriptionManagement;
 
         this.handlerFactories = new EnumMap<>(StompCommand.class);
         for (StompFrameHandlerFactory handlerFactory : handlerFactories) {
@@ -109,16 +112,19 @@ public class StompRedisRelayService {
                 LOGGER.trace("Responding with STOMP frame: {}", response);
                 context.writeAndFlush(response);
 
-                if (stompFrameHandler.isCloseAfterResponse()) {
-                    context.close();
-                }
+            }
+
+            if (stompFrameHandler.isCloseAfterResponse()) {
+                context.close();
+                subscriptionManagement.unsubscribeAllForContext(context);
             }
         }
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        public void exceptionCaught(ChannelHandlerContext context, Throwable cause) throws Exception {
             LOGGER.warn("Exception in channel", cause);
-            ctx.close();
+            subscriptionManagement.unsubscribeAllForContext(context);
+            context.close();
         }
     }
 }

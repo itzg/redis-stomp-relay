@@ -2,7 +2,10 @@ package me.itzg.stomprelay.handlers;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.stomp.DefaultStompFrame;
+import io.netty.handler.codec.stomp.StompCommand;
 import io.netty.handler.codec.stomp.StompHeaders;
+
+import java.nio.charset.Charset;
 
 /**
  * @author Geoff Bourne
@@ -38,5 +41,11 @@ public abstract class AbstractStompFrameHandler implements StompFrameHandler {
             }
         }
         return false;
+    }
+
+    protected void buildErrorResponse(String errorMessage) {
+        response = new DefaultStompFrame(StompCommand.ERROR);
+        response.content().writeCharSequence(errorMessage, Charset.defaultCharset());
+        closeAfterResponse = true;
     }
 }
