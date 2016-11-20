@@ -2,6 +2,6 @@ machine:
   java:
     version: openjdk8
 
-general:
-  artifacts:
-    - "target/redis-stomp-relay-*.jar"
+test:
+  post:
+    - cp target/redis-stomp-relay-*.jar $CIRCLE_ARTIFACTS
