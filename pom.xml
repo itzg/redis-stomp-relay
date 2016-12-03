@@ -47,4 +47,11 @@
         </dependency>
     </dependencies>
 
+    <distributionManagement>
+        <repository>
+            <id>bintray-itzgeoff-artifacts</id>
+            <name>itzgeoff-artifacts</name>
+            <url>https://api.bintray.com/maven/itzgeoff/artifacts/redis-stomp-relay/;publish=1</url>
+        </repository>
+    </distributionManagement>
 </project>

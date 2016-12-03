@@ -5,3 +5,9 @@ machine:
 test:
   post:
     - cp target/redis-stomp-relay-*.jar $CIRCLE_ARTIFACTS
+
+deployment:
+  snapshots:
+    branch: master
+    commands:
+      - mvn -s settings.xml deploy
