@@ -53,7 +53,8 @@
     <build>
         <plugins>
             <plugin>
-                <artifactId>spring-boot-plugin</artifactId>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
