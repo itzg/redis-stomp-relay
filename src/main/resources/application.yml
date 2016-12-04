@@ -1,0 +1,6 @@
+spring:
+  redis:
+    host: ${redis.host}
+
+redis:
+  host: localhost
