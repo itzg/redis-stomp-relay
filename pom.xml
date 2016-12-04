@@ -19,6 +19,10 @@
         <netty.version>4.1.6.Final</netty.version>
     </properties>
 
+    <scm>
+        <developerConnection>scm:git:git://github.com:itzg/redis-stomp-relay.git</developerConnection>
+    </scm>
+
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -46,6 +50,16 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-release-plugin</artifactId>
+                <version>2.5.3</version>
+            </plugin>
+        </plugins>
+    </build>
 
     <distributionManagement>
         <repository>
