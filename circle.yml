@@ -1,13 +1,11 @@
-machine:
-  java:
-    version: openjdk8
-
-test:
-  post:
-    - cp target/redis-stomp-relay-*.jar $CIRCLE_ARTIFACTS
-
-deployment:
-  snapshots:
-    tag: /v[0-9]+(\.[0-9]+)*/
-    commands:
-      - mvn -DskipTests=true -s settings.xml package deploy
+version: 2
+executorType: docker
+containerInfo:
+  - image: maven:3.3.9-jdk-8
+stages:
+  build:
+    workDir: ~/redis-stomp-relay
+    steps:
+      - type: checkout
+      - type: shell
+        command: mvn package
