@@ -8,4 +8,4 @@ stages:
     steps:
       - type: checkout
       - type: shell
-        command: mvn package
+        command: strace mvn package
