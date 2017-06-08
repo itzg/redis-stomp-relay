@@ -23,4 +23,24 @@ public class StompRedisRelayProperties {
      * All message bodies published over Redis will be required to be this configured type.
      */
     String contentType = "application/json";
+
+    public int getPort() {
+        return port;
+    }
+
+    public int getMaxContentLength() {
+        return maxContentLength;
+    }
+
+    public String getChannelPrefix() {
+        return channelPrefix;
+    }
+
+    public String getRedisChannelPrefix() {
+        return redisChannelPrefix;
+    }
+
+    public String getContentType() {
+        return contentType;
+    }
 }
