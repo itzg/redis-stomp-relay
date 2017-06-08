@@ -1,5 +1,6 @@
 package me.itzg.stomprelay.handlers;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.stomp.DefaultStompFrame;
 import io.netty.handler.codec.stomp.StompCommand;
@@ -13,12 +14,14 @@ import java.nio.charset.Charset;
 public abstract class AbstractStompFrameHandler implements StompFrameHandler {
     protected ChannelHandlerContext context;
     protected StompHeaders headers;
+    protected ByteBuf content;
     protected DefaultStompFrame response;
     protected boolean closeAfterResponse;
 
-    public AbstractStompFrameHandler(ChannelHandlerContext context, StompHeaders headers) {
+    public AbstractStompFrameHandler(ChannelHandlerContext context, StompHeaders headers, ByteBuf content) {
         this.headers = headers;
         this.context = context;
+        this.content = content;
     }
 
     @Override

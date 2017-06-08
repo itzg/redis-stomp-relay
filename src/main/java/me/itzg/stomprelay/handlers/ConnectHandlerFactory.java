@@ -1,5 +1,6 @@
 package me.itzg.stomprelay.handlers;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.stomp.DefaultStompFrame;
 import io.netty.handler.codec.stomp.StompCommand;
@@ -23,14 +24,14 @@ public class ConnectHandlerFactory implements StompFrameHandlerFactory {
     }
 
     @Override
-    public StompFrameHandler create(ChannelHandlerContext context, StompHeaders headers) {
-        return new Handler(context, headers);
+    public StompFrameHandler create(ChannelHandlerContext context, StompHeaders headers, ByteBuf content) {
+        return new Handler(context, headers, content);
     }
 
     private class Handler extends AbstractStompFrameHandler {
 
-        public Handler(ChannelHandlerContext context, StompHeaders headers) {
-            super(context, headers);
+        public Handler(ChannelHandlerContext context, StompHeaders headers, ByteBuf content) {
+            super(context, headers, content);
         }
 
         @Override
