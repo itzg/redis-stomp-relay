@@ -18,6 +18,7 @@ import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.listener.Topic;
 import org.springframework.data.redis.listener.adapter.MessageListenerAdapter;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.stereotype.Service;
 
 /**
@@ -29,7 +30,6 @@ public class SubscriptionManagement {
     private static final Logger LOGGER = LoggerFactory.getLogger(SubscriptionManagement.class);
     private final StompRedisRelayProperties properties;
     private final RedisMessageListenerContainer redisMessageListenerContainer;
-    private final Jackson2JsonRedisSerializer<Object> serializer;
 
     private ConcurrentHashMap<String/*listnerUniqueId*/, PerSubscriptionListenerAdapter> subscriptions =
             new ConcurrentHashMap<>();
@@ -37,12 +37,10 @@ public class SubscriptionManagement {
     @Autowired
     public SubscriptionManagement(
         StompRedisRelayProperties properties,
-        RedisMessageListenerContainer redisMessageListenerContainer,
-        Jackson2JsonRedisSerializer<Object> serializer) {
+        RedisMessageListenerContainer redisMessageListenerContainer) {
 
         this.properties = properties;
         this.redisMessageListenerContainer = redisMessageListenerContainer;
-        this.serializer = serializer;
     }
 
     public void subscribe(ChannelHandlerContext context, String channel, String subId) {
@@ -92,7 +90,6 @@ public class SubscriptionManagement {
         public PerSubscriptionListenerAdapter(ChannelHandlerContext context, String subId, String listenerId) {
 
             this.context = context;
-            this.setSerializer(serializer);
             this.setDelegate(new MessageListener() {
                 @Override
                 public void onMessage(Message message, byte[] pattern) {
