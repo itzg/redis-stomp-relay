@@ -5,7 +5,7 @@ import io.netty.channel.ChannelHandlerContext;
 /**
  * @author @albertocsm
  */
-public class Listner {
+public class Listener {
 
   public static String getListenerUniqueId(ChannelHandlerContext context, String subId){
 

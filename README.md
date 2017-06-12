@@ -33,9 +33,21 @@ The image exposes the standard STOMP port of 61613 and connects to a Redis insta
 
 ## Some considerations
 
-All the variables are self explanatory except maybe `stomp-redis-relay.channel-prefix`. This *must* be conherent with the value you configure in your client's `StompBrokerRelay` (1)
+* All the variables are self explanatory except maybe `stomp-redis-relay.channel-prefix`. This *must* be conherent with
+ the value you configure in your client's `StompBrokerRelay` (1).
+ 
+* Instead of `spring.redis.host`, `spring.redis.port` and `spring.redis.password`, you can instead use the short hand 
+config names `redis.host`, `redis.port` and `redis.password`.
 
-Additional Redis connection properties can be set by passing `--spring.redis.` prefixed properties (2)
+* If no values are configured at all, the the following defaults will be used:
+
+    `spring.redis.host: localhost`
+    
+    `spring.redis.port: 6379`        
+    
+    `stomp-redis-relay.channel-prefix: /channel/`        
+
+* Additional Redis connection properties can be set by passing `--spring.redis.` prefixed properties (2)
 
 ## External references
 

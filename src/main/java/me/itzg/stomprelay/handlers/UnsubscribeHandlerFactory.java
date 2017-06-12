@@ -4,7 +4,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.stomp.StompCommand;
 import io.netty.handler.codec.stomp.StompHeaders;
-import me.itzg.stomprelay.helpers.Listner;
+import me.itzg.stomprelay.helpers.Listener;
 import me.itzg.stomprelay.services.SubscriptionManagement;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -42,7 +42,7 @@ public class UnsubscribeHandlerFactory implements StompFrameHandlerFactory {
             final String subscriptionId = headers.getAsString(StompHeaders.ID);
 
             try {
-                subscriptionManagement.unsubscribe(context, Listner.getListenerUniqueId(context, subscriptionId));
+                subscriptionManagement.unsubscribe(context, Listener.getListenerUniqueId(context, subscriptionId));
             } catch (IllegalArgumentException e) {
                 buildErrorResponse(e.getMessage());
             }

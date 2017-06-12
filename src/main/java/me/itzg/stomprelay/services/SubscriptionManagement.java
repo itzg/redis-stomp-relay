@@ -7,7 +7,7 @@ import io.netty.handler.codec.stomp.StompHeaders;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import me.itzg.stomprelay.config.StompRedisRelayProperties;
-import me.itzg.stomprelay.helpers.Listner;
+import me.itzg.stomprelay.helpers.Listener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,8 +17,6 @@ import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.listener.Topic;
 import org.springframework.data.redis.listener.adapter.MessageListenerAdapter;
-import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
-import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.stereotype.Service;
 
 /**
@@ -47,7 +45,7 @@ public class SubscriptionManagement {
 
         // dont want to trust the client to guive me a unique session id
         // so, going to add some salt to the session id and try to mitigate the chances for the client miss behaving
-        String listenerId = Listner.getListenerUniqueId(context, subId);
+        String listenerId = Listener.getListenerUniqueId(context, subId);
 
         if (!subscriptions.containsKey(listenerId)) {
             Topic topic = new ChannelTopic(properties.getRedisChannelPrefix() + channel);
