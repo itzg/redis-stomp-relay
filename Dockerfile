@@ -7,5 +7,3 @@ ADD https://bintray.com/itzgeoff/artifacts/download_file?file_path=me%2Fitzg%2Fr
 EXPOSE 61613
 
 ENTRYPOINT ["/usr/bin/java","-jar","/opt/redis-stomp-relay.jar"]
-
-ENV REDIS_HOST=redis

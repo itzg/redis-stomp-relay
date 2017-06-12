@@ -4,6 +4,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 /**
  * @author Geoff Bourne
@@ -20,5 +21,10 @@ public class RedisConfig {
         bean.setConnectionFactory(redisConnectionFactory);
 
         return bean;
+    }
+
+    @Bean
+    StringRedisSerializer stringRedisSerializer() {
+        return new StringRedisSerializer();
     }
 }

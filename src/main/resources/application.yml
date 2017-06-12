@@ -1,6 +1,11 @@
 spring:
   redis:
-    host: ${redis.host}
+    host: ${redis.host:localhost}
+    port: ${redis.port:6379}
+    password: ${redis.password}
 
-redis:
-  host: localhost
+stomp-redis-relay:
+  channel-prefix: '/channel/'
+
+logging.level.me.itzg.stomprelay: TRACE
+

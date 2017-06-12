@@ -1,23 +1,32 @@
 package me.itzg.stomprelay.services;
 
-import me.itzg.stomprelay.config.StompRedisRelayProperties;
-import me.itzg.stomprelay.handlers.StompFrameHandler;
-import me.itzg.stomprelay.handlers.StompFrameHandlerFactory;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.*;
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.codec.stomp.*;
+import io.netty.handler.codec.stomp.DefaultStompFrame;
+import io.netty.handler.codec.stomp.StompCommand;
+import io.netty.handler.codec.stomp.StompFrame;
+import io.netty.handler.codec.stomp.StompHeaders;
+import io.netty.handler.codec.stomp.StompSubframeAggregator;
+import io.netty.handler.codec.stomp.StompSubframeDecoder;
+import io.netty.handler.codec.stomp.StompSubframeEncoder;
+import java.util.EnumMap;
+import java.util.List;
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+import me.itzg.stomprelay.config.StompRedisRelayProperties;
+import me.itzg.stomprelay.handlers.StompFrameHandler;
+import me.itzg.stomprelay.handlers.StompFrameHandlerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
-import java.util.EnumMap;
-import java.util.List;
 
 /**
  * @author Geoff Bourne
@@ -59,14 +68,10 @@ public class StompRedisRelayService {
                         @Override
                         protected void initChannel(SocketChannel channel) throws Exception {
                             final ChannelPipeline pipeline = channel.pipeline();
-
                             pipeline.addLast(new StompSubframeDecoder());
                             pipeline.addLast(new StompSubframeEncoder());
-
                             pipeline.addLast(new StompSubframeAggregator(properties.getMaxContentLength()));
-
                             pipeline.addLast(new InboundStompFrameHandler());
-
                         }
                     })
                     .bind(properties.getPort())
@@ -94,20 +99,21 @@ public class StompRedisRelayService {
             final StompCommand command = stompFrame.command();
             LOGGER.trace("Processing incoming STOMP {} frame: {}", command, stompFrame);
             final StompHeaders headers = stompFrame.headers();
+            final ByteBuf content = stompFrame.content();
 
             final StompFrameHandlerFactory handlerFactory = handlerFactories.get(command);
             if (handlerFactory == null) {
                 LOGGER.warn("Received an unsupported command {}", command);
-                DefaultStompFrame response = new DefaultStompFrame(StompCommand.ERROR);
+                StompFrame response = new DefaultStompFrame(StompCommand.ERROR);
                 context.writeAndFlush(response);
                 context.close();
                 return;
             }
 
-            final StompFrameHandler stompFrameHandler = handlerFactory.create(context, headers);
+            final StompFrameHandler stompFrameHandler = handlerFactory.create(context, headers, content);
             stompFrameHandler.invoke();
 
-            final DefaultStompFrame response = stompFrameHandler.getResponse();
+            final StompFrame response = stompFrameHandler.getResponse();
             if (response != null) {
                 LOGGER.trace("Responding with STOMP frame: {}", response);
                 context.writeAndFlush(response);

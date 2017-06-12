@@ -4,7 +4,10 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.stomp.DefaultStompFrame;
 import io.netty.handler.codec.stomp.StompCommand;
 import io.netty.handler.codec.stomp.StompHeaders;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import me.itzg.stomprelay.config.StompRedisRelayProperties;
+import me.itzg.stomprelay.helpers.Listener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,51 +16,62 @@ import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.listener.Topic;
+import org.springframework.data.redis.listener.adapter.MessageListenerAdapter;
 import org.springframework.stereotype.Service;
-
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author Geoff Bourne
  */
 @Service
 public class SubscriptionManagement {
-    private static final Logger LOGGER = LoggerFactory.getLogger(SubscriptionManagement.class);
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(SubscriptionManagement.class);
     private final StompRedisRelayProperties properties;
     private final RedisMessageListenerContainer redisMessageListenerContainer;
 
-    private ConcurrentHashMap<String/*subId*/, PerSubscriptionListener> subscriptions =
+    private ConcurrentHashMap<String/*listnerUniqueId*/, PerSubscriptionListenerAdapter> subscriptions =
             new ConcurrentHashMap<>();
 
     @Autowired
-    public SubscriptionManagement(StompRedisRelayProperties properties,
-                                  RedisMessageListenerContainer redisMessageListenerContainer) {
+    public SubscriptionManagement(
+        StompRedisRelayProperties properties,
+        RedisMessageListenerContainer redisMessageListenerContainer) {
+
         this.properties = properties;
         this.redisMessageListenerContainer = redisMessageListenerContainer;
     }
 
-    public void subscribe(ChannelHandlerContext context, String channel, String subscriptionId) {
-        final PerSubscriptionListener listener = new PerSubscriptionListener(context, subscriptionId);
+    public void subscribe(ChannelHandlerContext context, String channel, String subId) {
 
-        Topic topic = new ChannelTopic(properties.getRedisChannelPrefix() + channel);
-        LOGGER.debug("Subscribing client address={} subscription={} mapping channel={} onto topic={}",
-                context.channel().remoteAddress(), subscriptionId, channel, topic);
+        // dont want to trust the client to guive me a unique session id
+        // so, going to add some salt to the session id and try to mitigate the chances for the client miss behaving
+        String listenerId = Listener.getListenerUniqueId(context, subId);
 
-        redisMessageListenerContainer.addMessageListener(listener, topic);
-        subscriptions.put(subscriptionId, listener);
+        if (!subscriptions.containsKey(listenerId)) {
+            Topic topic = new ChannelTopic(properties.getRedisChannelPrefix() + channel);
+            LOGGER.debug("Subscribing client address={} subscription={} mapping channel={} onto topic={}",
+                context.channel().remoteAddress(), subId, channel, topic);
+
+            PerSubscriptionListenerAdapter listener = new PerSubscriptionListenerAdapter(context, subId, listenerId);
+            redisMessageListenerContainer.addMessageListener(listener, topic);
+            subscriptions.put(listenerId, listener);
+        } else {
+
+            LOGGER.warn(
+                "Listner [{}] already exists. Maybe clients are not sending unique session ids.",
+                listenerId);
+        }
     }
 
-    public void unsubscribe(ChannelHandlerContext context, String subscriptionId) {
-        final PerSubscriptionListener listener = subscriptions.remove(subscriptionId);
+    public void unsubscribe(ChannelHandlerContext context, String listnerUniqueId) {
+
+        PerSubscriptionListenerAdapter listener = subscriptions.remove(listnerUniqueId);
 
         if (listener != null) {
-            LOGGER.debug("Unsubscribing subscription ID={} from context={}", subscriptionId, context);
             redisMessageListenerContainer.removeMessageListener(listener);
-        }
-        else {
-            throw new IllegalArgumentException("Unknown subscription ID");
+            LOGGER.debug("Unsubscribed subscription ID={} from context={}", listnerUniqueId, context);
+        } else {
+            throw new IllegalArgumentException(String.format("Unknown subscription ID [%s]", listnerUniqueId));
         }
     }
 
@@ -67,33 +81,32 @@ public class SubscriptionManagement {
                 .forEach(e -> unsubscribe(context, e.getKey()));
     }
 
-    private class PerSubscriptionListener implements MessageListener {
+    private class PerSubscriptionListenerAdapter extends MessageListenerAdapter {
         private final ChannelHandlerContext context;
-        private final String subscriptionId;
         private final AtomicInteger messageId = new AtomicInteger(1);
 
-        public PerSubscriptionListener(ChannelHandlerContext context, String subscriptionId) {
+        public PerSubscriptionListenerAdapter(ChannelHandlerContext context, String subId, String listenerId) {
+
             this.context = context;
-            this.subscriptionId = subscriptionId;
-        }
+            this.setDelegate(new MessageListener() {
+                @Override
+                public void onMessage(Message message, byte[] pattern) {
+                    LOGGER.trace("Subscription [{}] received redis channel message [{}]", listenerId, message);
+                    final String channel = new String(message.getChannel())
+                        .substring(properties.getRedisChannelPrefix().length());
+                    final byte[] body = message.getBody();
 
-        @Override
-        public void onMessage(Message message, byte[] bytes) {
-            LOGGER.trace("Received Redis channel message {}", message);
-            final String channel = new String(message.getChannel())
-                    .substring(properties.getRedisChannelPrefix().length());
-            final byte[] body = message.getBody();
+                    final DefaultStompFrame messageFrame = new DefaultStompFrame(StompCommand.MESSAGE);
+                    messageFrame.headers().add(StompHeaders.SUBSCRIPTION, subId);
+                    messageFrame.headers().add(StompHeaders.MESSAGE_ID, Integer.toString(messageId.getAndIncrement()));
+                    messageFrame.headers().add(StompHeaders.DESTINATION, properties.getChannelPrefix() + channel);
+                    messageFrame.headers().add(StompHeaders.CONTENT_TYPE, properties.getContentType());
+                    messageFrame.headers().addInt(StompHeaders.CONTENT_LENGTH, body.length);
+                    messageFrame.content().writeBytes(body);
 
-            final DefaultStompFrame messageFrame = new DefaultStompFrame(StompCommand.MESSAGE);
-            final StompHeaders headersOut = messageFrame.headers();
-            headersOut.add(StompHeaders.SUBSCRIPTION, subscriptionId);
-            headersOut.add(StompHeaders.MESSAGE_ID, Integer.toString(messageId.getAndIncrement()));
-            headersOut.add(StompHeaders.DESTINATION, properties.getChannelPrefix() + channel);
-            headersOut.add(StompHeaders.CONTENT_TYPE, properties.getContentType());
-            headersOut.addInt(StompHeaders.CONTENT_LENGTH, body.length);
-            messageFrame.content().writeBytes(body);
-
-            context.writeAndFlush(messageFrame);
+                    context.writeAndFlush(messageFrame);
+                }
+            });
         }
     }
 }
